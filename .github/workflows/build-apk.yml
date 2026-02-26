@@ -21,13 +21,11 @@ jobs:
             libgirepository1.0-dev \
             pkg-config \
             python3-dev \
-            libjpeg-dev \
-            libpng-dev \
-            libtiff-dev \
-            gcc \
-            g++
-          # Android SDK için gerekli
-          sudo apt-get install -y \
+            libglib2.0-dev \
+            gobject-introspection \
+            libgtk-3-dev \
+            libssl-dev \
+            libffi-dev \
             android-sdk \
             gradle
 
@@ -37,11 +35,11 @@ jobs:
           python-version: '3.11'
 
       - name: Bağımlılıkları kur
+        env:
+          PKG_CONFIG_PATH: /usr/lib/x86_64-linux-gnu/pkgconfig
         run: |
           pip install --upgrade pip
-          pip install briefcase toga
-          # Sistem kütüphanelerini bulsun diye
-          export PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig:$PKG_CONFIG_PATH
+          pip install briefcase
           pip install -r requirements.txt
 
       - name: APK build et
