@@ -1,5 +1,5 @@
 # Android için gerekenler
-toga-android==0.5.0
+toga==0.5.0
 gTTS==2.5.4
 SpeechRecognition==3.14.5
 loguru==0.7.3
@@ -8,4 +8,4 @@ requests==2.32.5
 certifi==2026.1.4
 idna==3.11
 urllib3==2.6.3
-pyzbar==0.1.9        # QR okuma (isteğe bağlı)
+pyzbar==0.1.9
