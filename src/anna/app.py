@@ -17,9 +17,10 @@ import time
 from datetime import datetime
 import hashlib
 
-from .core.voice_engine import VoiceEngine
-from .core.ai_engine import AIEngine
-from .config.settings import Config
+# Doğru importlar
+from anna.core.voice_engine import VoiceEngine
+from anna.core.ai_engine import AIEngine
+from anna.config.settings import Config
 
 class LoginWindow(toga.Window):
     """Giriş Penceresi"""
