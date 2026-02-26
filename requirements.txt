@@ -1,0 +1,26 @@
+# --- Temel Framework ---
+toga==0.5.0
+toga-android==0.5.0
+
+# --- Yapay Zeka ve Veri ---
+requests==2.32.3
+pandas==2.2.3
+numpy==1.26.4
+python-dotenv==1.0.1
+
+# --- Ses Motoru (Voice) ---
+gTTS==2.5.4
+SpeechRecognition==3.10.4
+pygame==2.6.1
+loguru==0.7.3
+
+# --- AR ve Görüntü İşleme ---
+opencv-python-headless==4.10.0.84
+mediapipe==0.10.18
+face-recognition==1.3.0
+pyzbar==0.1.9
+pytesseract==0.3.13
+
+# --- Yardımcı Araçlar ---
+pillow==11.1.0
+certifi==2024.12.14

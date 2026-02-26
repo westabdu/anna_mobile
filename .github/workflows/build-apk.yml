@@ -11,25 +11,42 @@ jobs:
     
     steps:
       - name: Depoyu indir
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Python kur
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
+      - name: Dizin yapısını kontrol et
+        run: |
+          pwd
+          ls -la
+          ls -la anna/ || echo "anna klasörü yok"
+          
       - name: Bağımlılıkları kur
         run: |
+          pip install --upgrade pip
           pip install briefcase toga
-          pip install -r requirements.txt
+          # requirements.txt nerede diye kontrol et
+          if [ -f anna/requirements.txt ]; then
+            pip install -r anna/requirements.txt
+          elif [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          else
+            echo "requirements.txt bulunamadı!"
+            exit 1
+          fi
 
       - name: APK build et
         run: |
+          cd anna
           briefcase create android
           briefcase build android
 
       - name: APK'yı yükle
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4   # <-- SADECE BURASI DEĞİŞTİ
+        if: success()
         with:
           name: ANNA-Mobil-APK
-          path: android/gradle/anna/build/outputs/apk/debug/anna-debug.apk
+          path: anna/android/gradle/anna/build/outputs/apk/debug/anna-debug.apk
