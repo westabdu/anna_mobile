@@ -13,44 +13,39 @@ jobs:
       - name: Depoyu indir
         uses: actions/checkout@v4
 
-      - name: Sistem bağımlılıklarını kur
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libcairo2-dev \
-            libgirepository1.0-dev \
-            pkg-config \
-            python3-dev \
-            libglib2.0-dev \
-            gobject-introspection \
-            libgtk-3-dev \
-            libssl-dev \
-            libffi-dev \
-            android-sdk \
-            gradle
-
       - name: Python kur
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: Bağımlılıkları kur
-        env:
-          PKG_CONFIG_PATH: /usr/lib/x86_64-linux-gnu/pkgconfig
-        run: |
-          pip install --upgrade pip
-          pip install briefcase
-          pip install -r requirements.txt
-
-      - name: APK build et
-        run: |
-          cd src/anna
-          briefcase create android
-          briefcase build android
-
-      - name: APK'yı yükle
-        uses: actions/upload-artifact@v4
-        if: success()
+      - name: Java Kur (Android için Şart)
+        uses: actions/setup-java@v4
         with:
-          name: ANNA-Mobil-APK
-          path: src/anna/android/gradle/anna/build/outputs/apk/debug/anna-debug.apk
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Sistem Bağımlılıklarını Kur
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git python3-dev libcanberra-gtk3-module libgirepository1.0-dev libcairo2-dev pkg-config gir1.2-gtk-3.0
+
+      - name: Briefcase ve Gereksinimleri Kur
+        run: |
+          python -m pip install --upgrade pip
+          pip install briefcase
+          # Eğer ana dizinde requirements.txt varsa:
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: APK Build Et ( create + build + package )
+        run: |
+          # DİKKAT: cd src/anna KOMUTU KALDIRILDI! 
+          # pyproject.toml dosyanı ana dizine taşıdığını varsayıyoruz.
+          briefcase create android --no-input
+          briefcase build android --no-input
+          briefcase package android --no-input
+
+      - name: APK'yı Yükle (Artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ANNA-Android-APK
+          path: "android/gradle/*/*/*.apk" # Briefcase'in APK'yı ürettiği standart yol
