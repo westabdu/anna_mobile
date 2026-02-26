@@ -1,5 +1,5 @@
-# Android için gerekenler
-toga==0.5.0
+# requirements.txt - Android için DOĞRU VERSİYON
+toga-android==0.5.0
 gTTS==2.5.4
 SpeechRecognition==3.14.5
 loguru==0.7.3
