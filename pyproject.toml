@@ -30,11 +30,11 @@ test_sources = [
 # GEREKLİ PAKETLER (MEDIAPIPE'SİZ)
 # ============================================
 requires = [
-    "toga~=0.5.0",
+    "toga-android==0.5.0",
     "edge-tts==7.2.7",
     "SpeechRecognition==3.14.5",
     "gTTS==2.5.4",
-    "pyzbar==0.1.9",          # QR okuma (saf Python, Android'de çalışır)
+    "pyzbar==0.1.9",
     "loguru==0.7.3",
     "python-dotenv==1.2.1",
     "requests==2.32.5",

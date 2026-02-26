@@ -27,25 +27,37 @@ jobs:
       - name: Sistem Bağımlılıklarını Kur
         run: |
           sudo apt-get update
-          sudo apt-get install -y git python3-dev libcanberra-gtk3-module libgirepository1.0-dev libcairo2-dev pkg-config gir1.2-gtk-3.0
+          sudo apt-get install -y \
+            git \
+            python3-dev \
+            pkg-config \
+            libssl-dev \
+            libffi-dev \
+            libcairo2-dev \
+            libgirepository1.0-dev \
+            gir1.2-gtk-3.0 \
+            libcanberra-gtk3-module
 
       - name: Briefcase ve Gereksinimleri Kur
         run: |
           python -m pip install --upgrade pip
           pip install briefcase
-          # Eğer ana dizinde requirements.txt varsa:
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          if [ -f requirements.txt ]; then 
+            echo "📦 requirements.txt bulundu, yükleniyor..."
+            pip install -r requirements.txt
+          else
+            echo "⚠️ requirements.txt bulunamadı, sadece briefcase ile devam ediliyor."
+          fi
 
-      - name: APK Build Et ( create + build + package )
+      - name: APK Build Et
         run: |
-          # DİKKAT: cd src/anna KOMUTU KALDIRILDI! 
-          # pyproject.toml dosyanı ana dizine taşıdığını varsayıyoruz.
+          # NOT: pyproject.toml dosyanın ana dizinde olduğundan emin ol
           briefcase create android --no-input
           briefcase build android --no-input
           briefcase package android --no-input
 
-      - name: APK'yı Yükle (Artifact)
+      - name: APK'yı Yükle
         uses: actions/upload-artifact@v4
         with:
           name: ANNA-Android-APK
-          path: "android/gradle/*/*/*.apk" # Briefcase'in APK'yı ürettiği standart yol
+          path: "**/*.apk"
