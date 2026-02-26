@@ -44,7 +44,7 @@ jobs:
 
       - name: APK build et
         run: |
-          cd anna
+          cd src/anna
           briefcase create android
           briefcase build android
 
@@ -53,4 +53,4 @@ jobs:
         if: success()
         with:
           name: ANNA-Mobil-APK
-          path: anna/android/gradle/anna/build/outputs/apk/debug/anna-debug.apk
+          path: src/anna/android/gradle/anna/build/outputs/apk/debug/anna-debug.apk
