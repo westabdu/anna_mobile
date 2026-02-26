@@ -1,0 +1,120 @@
+# pyproject.toml - A.N.N.A Mobil BeeWare Projesi
+[tool.briefcase]
+project_name = "ANNA_Mobil"
+bundle = "com.annamobile"
+version = "0.1.0"
+url = "https://github.com/westabdu/anna"
+license.file = "LICENSE"
+author = "westabdu"
+author_email = "nihaikapibukucu@gmail.com"
+
+[tool.briefcase.app.anna]
+formal_name = "ANNA Mobil"
+description = "A.N.N.A Mobil Asistan - Sesli komut ve AR özellikli"
+long_description = """
+A.N.N.A (Adaptif Nöro-Network Asistanı) mobil versiyonu.
+- Sesli komut ile kontrol
+- AR nesne tanıma
+- QR kod okuma
+- Yüz ve el tespiti
+- Sohbet asistanı
+"""
+
+sources = [
+    "src/anna",
+]
+test_sources = [
+    "tests",
+]
+
+# ============================================
+# ÖNEMLİ: GEREKLİ PAKETLER BURAYA EKLENDİ!
+# ============================================
+requires = [
+    "toga~=0.5.0",
+    "edge-tts==7.2.7",
+    "SpeechRecognition==3.14.5",
+    "gTTS==2.5.4",
+    "mediapipe==0.10.32",
+    "numpy==2.4.2",
+    "pyzbar==0.1.9",
+    "psutil==7.2.2",
+    "python-dotenv==1.2.1",
+    "loguru==0.7.3",
+    "certifi==2026.1.4",
+    "chardet==5.2.0",
+    "charset-normalizer==3.4.4",
+    "idna==3.11",
+    "urllib3==2.6.3",
+    "requests==2.32.5",
+    "packaging==26.0",
+]
+
+test_requires = [
+    "pytest",
+]
+
+# ============================================
+# PLATFORM ÖZEL AYARLAR
+# ============================================
+
+# Android (Ana Hedef)
+[tool.briefcase.app.anna.android]
+requires = [
+    "toga-android~=0.5.0",
+]
+
+base_theme = "Theme.MaterialComponents.Light.DarkActionBar"
+
+build_gradle_dependencies = [
+    "com.google.android.material:material:1.13.0",
+    # Kamera izni için
+    "androidx.camera:camera-core:1.4.1",
+    "androidx.camera:camera-camera2:1.4.1",
+    "androidx.camera:camera-lifecycle:1.4.1",
+]
+
+# Windows (Geliştirme için)
+[tool.briefcase.app.anna.windows]
+requires = [
+    "toga-winforms~=0.5.0",
+]
+
+# macOS (Geliştirme için)
+[tool.briefcase.app.anna.macOS]
+universal_build = true
+requires = [
+    "toga-cocoa~=0.5.0",
+    "std-nslog~=0.1.0",
+]
+
+# Linux (Geliştirme için)
+[tool.briefcase.app.anna.linux]
+requires = [
+    "toga-gtk~=0.5.0",
+]
+
+[tool.briefcase.app.anna.linux.system.debian]
+system_requires = [
+    "libcairo2-dev",
+    "libgirepository1.0-dev",
+]
+
+system_runtime_requires = [
+    "gir1.2-gtk-3.0",
+    "libgirepository-1.0-1",
+    "libcanberra-gtk3-module",
+]
+
+# iOS (Gelecek için)
+[tool.briefcase.app.anna.iOS]
+requires = [
+    "toga-iOS~=0.5.0",
+    "std-nslog~=0.1.0",
+]
+
+# Web (Gelecek için)
+[tool.briefcase.app.anna.web]
+requires = [
+    "toga-web~=0.5.0",
+]
