@@ -1,21 +1,16 @@
-# --- Temel Framework (Android) ---
-toga-android==0.5.0
+# --- Temel Framework ---
+toga==0.5.0
 
 # --- Yapay Zeka ve Veri ---
 requests==2.32.3
 python-dotenv==1.0.1
 
 # --- Ses Motoru (Voice) ---
+edge-tts==7.2.7
+SpeechRecognition==3.14.5
 gTTS==2.5.4
-SpeechRecognition==3.10.4
 loguru==0.7.3
-
-# --- AR ve Görüntü İşleme ---
-mediapipe==0.10.18
-pyzbar==0.1.9
-opencv-python-headless==4.10.0.84
 
 # --- Yardımcı Araçlar ---
 certifi==2024.12.14
-numpy==1.26.4
-pillow==11.1.0
+pyzbar==0.1.9        # QR okuma için (saf Python)
