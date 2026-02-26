@@ -1,8 +1,8 @@
 # config/settings.py
 """
-A.N.N.A yapılandırma dosyası
-- Local AI (Ollama) için API key gerekmez
-- Sadece harici servisler için API key'ler
+A.N.N.A yapılandırma dosyası - Android için optimize edilmiş
+- Telefonda çalışacak ayarlar
+- Hafif ve hızlı
 """
 import os
 from pathlib import Path
@@ -16,31 +16,25 @@ class Config:
     LOGS_DIR = DATA_DIR / "logs"
     MEMORY_DIR = DATA_DIR / "memory"
     
-    # ---------- API KEY'LER (HALA GEREKLİ) ----------
-    # Hava durumu için (OpenWeatherMap)
-    OPENWEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY")
+    # ---------- ANDROİD İÇİN BASİT API KEY'LER ----------
+    # İnternet varsa çalışır, yoksa offline moda geçer
+    OPENWEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY", "")
+    NEWS_API_KEY = os.getenv("NEWS_API_KEY", "")
+    SERPAPI_API_KEY = os.getenv("SERPAPI_API_KEY", "")
+    PICOVOICE_ACCESS_KEY = os.getenv("PICOVOICE_ACCESS_KEY", "")
     
-    # Haberler için (NewsAPI)
-    NEWS_API_KEY = os.getenv("NEWS_API_KEY")
+    # ---------- ANDROİD MODU ----------
+    IS_ANDROID = True  # Telefonda olduğumuzu belirt
     
-    # Web arama için (SerpAPI - opsiyonel)
-    SERPAPI_API_KEY = os.getenv("SERPAPI_API_KEY")
-    
-    # Wake word için (Picovoice)
-    PICOVOICE_ACCESS_KEY = os.getenv("PICOVOICE_ACCESS_KEY")
-    
-    # ---------- KALDIRILAN API KEY'LER ----------
-    # GEMINI_API_KEY - Artık kullanılmıyor (Local Ollama'ya geçtik)
-    # GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")  # SİLİNDİ
-    
-    # ---------- OLLAMA AYARLARI ----------
-    OLLAMA_URL = "http://localhost:11434"
-    CHAT_MODEL = "qwen2.5:7b"
-    CODE_MODEL = "deepseek-coder:6.7b"
+    # ---------- OFFLINE MOD ----------
+    OFFLINE_MODE = False  # İnternet yoksa True olur
     
     # ---------- SES MOTORU ----------
-    DEFAULT_VOICE = "serena"  # serena, vivian, sohee, anna, aiden, ryan
-    USE_GPU = True  # GPU varsa True
+    # Android'de gTTS kullanılır (pygame yok)
+    DEFAULT_VOICE = "tr"  # Türkçe
+    
+    # ---------- HAFIZA AYARLARI ----------
+    MAX_CONVERSATIONS = 100  # Telefonda fazla yer kaplamasın
     
     @classmethod
     def create_dirs(cls):
@@ -49,7 +43,19 @@ class Config:
         cls.LOGS_DIR.mkdir(exist_ok=True)
         cls.MEMORY_DIR.mkdir(exist_ok=True)
         
-        # Ses modeli için klasör
-        (cls.DATA_DIR / "voices").mkdir(exist_ok=True)
+        # Ses dosyaları için klasör (Android'de geçici)
+        (cls.DATA_DIR / "temp").mkdir(exist_ok=True)
         
         return cls
+    
+    @classmethod
+    def check_internet(cls):
+        """İnternet bağlantısını kontrol et (opsiyonel)"""
+        try:
+            import requests
+            requests.get("https://www.google.com", timeout=2)
+            cls.OFFLINE_MODE = False
+            return True
+        except:
+            cls.OFFLINE_MODE = True
+            return False
