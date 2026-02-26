@@ -1,0 +1,35 @@
+name: A.N.N.A APK Build
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Depoyu indir
+        uses: actions/checkout@v3
+
+      - name: Python kur
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Bağımlılıkları kur
+        run: |
+          pip install briefcase toga
+          pip install -r requirements.txt
+
+      - name: APK build et
+        run: |
+          briefcase create android
+          briefcase build android
+
+      - name: APK'yı yükle
+        uses: actions/upload-artifact@v3
+        with:
+          name: ANNA-Mobil-APK
+          path: android/gradle/anna/build/outputs/apk/debug/anna-debug.apk
