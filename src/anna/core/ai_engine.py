@@ -10,10 +10,10 @@ import requests
 import json
 from datetime import datetime
 from loguru import logger
-from config.settings import Config
-from core.personality import Personality
-from core.memory import Memory
-from core.voice_engine import VoiceEngine
+from anna.config.settings import Config
+from anna.core.personality import Personality
+from anna.core.memory import Memory
+from anna.core.voice_engine import VoiceEngine
 
 # Android'de çalışmayan modülleri geçici olarak devre dışı bırak
 try:
