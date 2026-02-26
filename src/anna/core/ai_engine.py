@@ -1,13 +1,10 @@
-# core/ai_engine.py
+# core/ai_engine.py - Android için optimize edilmiş
 """
-A.N.N.A'nın yapay zeka motoru - Android için optimize edilmiş
-- İnternet yoksa bile çalışır (offline)
-- Telefon için hafif mod
+A.N.N.A'nın yapay zeka motoru - Android için offline mod
 """
 
 import re
 import requests
-import json
 from datetime import datetime
 from loguru import logger
 from anna.config.settings import Config
@@ -15,81 +12,70 @@ from anna.core.personality import Personality
 from anna.core.memory import Memory
 from anna.core.voice_engine import VoiceEngine
 
-# Android'de çalışmayan modülleri geçici olarak devre dışı bırak
+# Android'de çalışmayan modülleri devre dışı bırak
 try:
-    from modules.weather import WeatherAPI
+    from anna.modules.weather import WeatherAPI
     WEATHER_AVAILABLE = True
 except ImportError:
     WEATHER_AVAILABLE = False
-    print("⚠️ Weather modülü yok")
 
 try:
-    from modules.news import NewsAPI
+    from anna.modules.news import NewsAPI
     NEWS_AVAILABLE = True
 except ImportError:
     NEWS_AVAILABLE = False
-    print("⚠️ News modülü yok")
 
 try:
-    from modules.web_search import WebSearch
+    from anna.modules.web_search import WebSearch
     WEB_AVAILABLE = True
 except ImportError:
     WEB_AVAILABLE = False
-    print("⚠️ WebSearch modülü yok")
 
 try:
-    from modules.computer_control import ComputerControl
-    COMPUTER_AVAILABLE = True
+    from anna.modules.calendar import CalendarManager
+    CALENDAR_AVAILABLE = True
 except ImportError:
-    COMPUTER_AVAILABLE = False
-    print("⚠️ ComputerControl modülü yok")
+    CALENDAR_AVAILABLE = False
 
 try:
-    from modules.whatsapp_enhanced import WhatsAppEnhanced
-    WHATSAPP_AVAILABLE = True
+    from anna.modules.notes import NotesManager
+    NOTES_AVAILABLE = True
 except ImportError:
-    WHATSAPP_AVAILABLE = False
-    print("⚠️ WhatsApp modülü yok")
+    NOTES_AVAILABLE = False
 
-# Yüz tanıma (Android'de çalışmaz)
 try:
-    from modules.face_recognition import FaceRecognition
-    FACE_AVAILABLE = True
+    from anna.modules.gamification import Gamification
+    GAME_AVAILABLE = True
 except ImportError:
-    FACE_AVAILABLE = False
-    print("⚠️ FaceRecognition modülü yok (Android'de çalışmaz)")
+    GAME_AVAILABLE = False
 
 class AIEngine:
-    """A.N.N.A'nın beyni - Android için optimize edilmiş"""
-    
     def __init__(self, config: Config):
         self.config = config
         self.personality = Personality()
         self.memory = Memory(config.DATA_DIR / "jarvis.db")
         self.voice = VoiceEngine()
         
-        # ---------- ANDROİD İÇİN OFFLINE MOD ----------
-        # Telefonda Ollama yok, basit yanıtlar verecek
+        # İnternet kontrolü
         self.is_online = self._check_internet()
         
-        # ---------- MODÜLLERİ BAŞLAT (Android'de çalışanlar) ----------
+        # Modülleri başlat (varsa)
         self.weather = WeatherAPI() if WEATHER_AVAILABLE else None
         self.news = NewsAPI() if NEWS_AVAILABLE else None
         self.web = WebSearch() if WEB_AVAILABLE else None
-        self.computer = ComputerControl() if COMPUTER_AVAILABLE else None
-        self.whatsapp = WhatsAppEnhanced() if WHATSAPP_AVAILABLE else None
-        self.face = FaceRecognition() if FACE_AVAILABLE else None
+        self.calendar = CalendarManager() if CALENDAR_AVAILABLE else None
+        self.notes = NotesManager() if NOTES_AVAILABLE else None
+        self.game = Gamification() if GAME_AVAILABLE else None
         
-        # Kullanıcı adını hatırla
+        # Kullanıcı adı
         self.user_name = self.memory.get_profile("user_name") or "Efendim"
         self.personality.user_name = self.user_name
         
-        logger.success(f"✅ AI Engine (Android) başlatıldı - Kullanıcı: {self.user_name}")
+        logger.success("✅ AI Engine (Android) başlatıldı")
         if not self.is_online:
-            logger.info("📴 İnternet yok, offline modda çalışıyor")
+            logger.info("📴 Offline mod aktif")
     
     def _check_internet(self):
-        """İnternet bağlantısını kontrol et"""
         try:
             requests.get("https://www.google.com", timeout=3)
             return True
@@ -97,132 +83,86 @@ class AIEngine:
             return False
     
     def cevapla(self, mesaj: str) -> str:
-        """Ana cevaplama fonksiyonu - Android için"""
-        
-        # ---------- OFFLINE CEVAPLAR ----------
-        if not self.is_online:
-            return self._offline_response(mesaj)
-        
-        # ---------- YÜZ TANIMA (Android'de çalışmaz) ----------
-        if "yüz kaydet" in mesaj.lower() or "yüz tanı" in mesaj.lower():
-            return "Yüz tanıma özelliği Android sürümünde devre dışıdır. Bilgisayarda kullanabilirsiniz."
-        
-        # ---------- HAVA DURUMU ----------
-        if "hava" in mesaj.lower() and self.weather:
-            sehir = re.sub(r'(hava|nasıl|durumu|kaç derece|sıcaklık)', '', mesaj.lower()).strip()
-            if sehir:
-                return self.weather.get_weather(sehir)
-            return "Hangi şehrin hava durumunu öğrenmek istersiniz?"
-        
-        # ---------- HABERLER ----------
-        if "haber" in mesaj.lower() and self.news:
-            if "teknoloji" in mesaj.lower():
-                return self.news.get_headlines(category="technology")
-            elif "spor" in mesaj.lower():
-                return self.news.get_headlines(category="sports")
-            else:
-                return self.news.get_headlines()
-        
-        # ---------- İNTERNET ARAMA ----------
-        if "ara" in mesaj.lower() and self.web:
-            sorgu = re.sub(r'(ara|internette ara|sorgula)', '', mesaj.lower()).strip()
-            if sorgu:
-                return self.web.search(sorgu)
-            return "Ne aramamı istersiniz?"
-        
-        # ---------- WHATSAPP (Basit) ----------
-        if "whatsapp" in mesaj.lower() and self.whatsapp:
-            return "WhatsApp özelliği şu anda Android'de çalışmıyor. Yakında eklenecek."
-        
-        # ---------- TARİH VE SAAT ----------
-        if "tarih" in mesaj.lower() or "saat" in mesaj.lower():
-            now = datetime.now()
-            return now.strftime("Saat %H:%M, %d %B %Y")
-        
-        # ---------- ÖZEL KOMUTLAR ----------
-        
-        # İsmini öğren
-        if "benim adım" in mesaj.lower():
-            name = mesaj.lower().replace("benim adım", "").strip()
-            if name:
-                self.memory.set_profile("user_name", name)
-                self.user_name = name
-                self.personality.user_name = name
-                return f"Hoş geldin {name}! Seni tanıdığıma memnun oldum."
-        
-        # Adını sor
-        if "adım ne" in mesaj.lower() or "ben kimim" in mesaj.lower():
-            return f"Adın {self.user_name}, bunu nasıl unutursun?"
-        
-        # Dün ne konuştuk?
-        if "dün ne konuştuk" in mesaj.lower() or "geçmiş" in mesaj.lower():
-            recent = self.memory.get_recent_conversations(3)
-            if recent:
-                response = "Son konuştuklarımız:\n"
-                for conv in recent:
-                    response += f"• Sen: {conv['user'][:50]}...\n"
-                return response
-            return "Daha önce konuşmadık gibi?"
-        
-        # Not al
-        if "not al" in mesaj.lower():
-            note_content = mesaj.lower().replace("not al", "").strip()
-            if note_content:
-                note_id = self.memory.add_note("Hızlı Not", note_content)
-                return f"Not alındı (ID: {note_id})"
-        
-        # Notları göster
-        if "notlarım" in mesaj.lower():
-            notes = self.memory.get_notes()
-            if notes:
-                response = "Notların:\n"
-                for note in notes[:5]:
-                    response += f"• {note['content'][:50]}...\n"
-                return response
-            return "Hiç not almamışsın."
-        
-        # ---------- KİŞİLİK VE ESPRİLER ----------
-        personality_response = self.personality.react_to_command(mesaj)
-        if personality_response:
-            return personality_response
-        
-        if "şaka yap" in mesaj.lower():
-            return self.personality.tell_joke()
-        
-        # ---------- DİĞER SOHBET ----------
-        if self.is_online:
-            return self._online_response(mesaj)
-        else:
-            return self._offline_response(mesaj)
-    
-    def _offline_response(self, mesaj: str) -> str:
-        """İnternet yokken basit cevaplar"""
         mesaj = mesaj.lower()
         
+        # ----- YARDIM KOMUTLARI -----
+        if "yardım" in mesaj or "ne yapabilirsin" in mesaj:
+            return self._yardim()
+        
+        # ----- HAVA DURUMU -----
+        if "hava" in mesaj and self.weather and self.is_online:
+            return self.weather.get_weather("İstanbul")
+        
+        # ----- TARİH/SAAT -----
+        if "tarih" in mesaj or "saat" in mesaj:
+            return datetime.now().strftime("%d %B %Y, %H:%M")
+        
+        # ----- NOTLAR -----
+        if "not al" in mesaj and self.notes:
+            note = mesaj.replace("not al", "").strip()
+            if note:
+                self.notes.add_note("Hızlı Not", note)
+                return f"✅ Not alındı: {note[:30]}..."
+        
+        if "notlarım" in mesaj and self.notes:
+            notes = self.notes.list_notes()
+            return notes
+        
+        # ----- HATIRLATICI -----
+        if "hatırlat" in mesaj and "dakika" in mesaj and self.calendar:
+            import re
+            dk = re.findall(r'\d+', mesaj)
+            if dk:
+                note = mesaj.replace("hatırlat", "").replace(dk[0], "").replace("dakika", "").strip()
+                return self.calendar.add_reminder(note, int(dk[0]))
+        
+        # ----- BASİT SOHBET -----
         if "merhaba" in mesaj or "selam" in mesaj:
             return f"Merhaba {self.user_name}, nasılsın?"
-        
         if "nasılsın" in mesaj:
             return "İyiyim, seni dinliyorum!"
-        
-        if "ne yapıyorsun" in mesaj:
-            return "Sana yardım etmeye çalışıyorum. Bir şey sormak ister misin?"
-        
         if "teşekkür" in mesaj:
-            return "Rica ederim, her zaman!"
+            return "Rica ederim 😊"
+        if "görüşürüz" in mesaj:
+            return "Görüşmek üzere!"
+        if "naber" in mesaj:
+            return "İyilik senden naber?"
         
-        if "görüşürüz" in mesaj or "hoşçakal" in mesaj:
-            return "Görüşmek üzere, iyi günler!"
+        # ----- ESPRİLER -----
+        if "şaka yap" in mesaj:
+            return self.personality.tell_joke()
         
-        # Varsayılan cevap
-        return "Anladım. Devam etmek için internet bağlantısı gerekebilir. Oflline moddayım."
+        # ----- OYUNLAŞTIRMA -----
+        if "istatistik" in mesaj and self.game:
+            return self.game.get_stats()
+        
+        if "başarımlar" in mesaj and self.game:
+            return self.game.get_achievements()
+        
+        # ----- EASTER EGG'LER -----
+        if self.game:
+            egg = self.game.check_easter_egg(mesaj)
+            if egg:
+                return egg
+        
+        # ----- VARSAYILAN CEVAP -----
+        if self.is_online:
+            return f"'{mesaj}' dedin. Bunu not aldım."
+        else:
+            return "Anladım. Devam etmek için internet gerekebilir."
     
-    def _online_response(self, mesaj: str) -> str:
-        """İnternet varken basit cevaplar (Ollama'sız)"""
-        # Burada basit bir sohbet motoru olabilir
-        # Şimdilik basit cevaplar verelim
-        return f"'{mesaj}' dedin. Bunu not aldım. Yakında daha akıllı olacağım!"
-    
-    def set_mood(self, mood: str) -> str:
-        """Ruh halini değiştir"""
+    def _yardim(self):
+        return """🤖 **A.N.N.A Komutları**
+        
+🌤️ hava durumu
+📅 tarih/saat
+📝 not al [not]
+📋 notlarım
+⏰ hatırlat [şey] [dakika]
+😂 şaka yap
+📊 istatistik
+🏆 başarımlar
+"""
+
+    def set_mood(self, mood: str):
         return self.personality.set_mood(mood)
