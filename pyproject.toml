@@ -2,17 +2,24 @@
 name = "anna_mobile"
 version = "0.4.0"
 description = "Adaptive Nöro Network Asistanı Mobil"
-readme = "README.md"
 requires-python = ">=3.9"
 authors = [
-    { name = "westabdu", email = "[email protected]" }
+    { name = "westabdu", email = "westabdu@users.noreply.github.com" }
 ]
 dependencies = [
     "flet==0.22.0",
-    "python-dotenv>=1.0.0",
-    "requests>=2.31.0",
-    "pillow>=10.0.0",
-    "cryptography>=41.0.0"
+    "python-dotenv==1.0.1",
+    "requests==2.32.3",
+    "pillow==11.1.0",
+    "psutil==7.0.0",
+    "numpy",
+    "google-generativeai==0.8.4",
+    "groq==0.15.0",
+    "pytesseract==0.3.13",
+    "pyzbar==0.1.9",
+    "SpeechRecognition==3.14.0",
+    "gTTS==2.5.4",
+    "edge-tts==7.2.0"
 ]
 
 [tool.flet]
@@ -22,8 +29,12 @@ company = "ANNA"
 copyright = "Copyright (C) 2026 by ANNA"
 
 [tool.flet.app]
-path = "."  # main.py'nin bulunduğu dizin
-module = "main"  # main.py dosyan
+path = "."
+module = "main"
 
 [tool.flet.android]
-# Android özel ayarlar
+permissions = [
+    "RECORD_AUDIO",
+    "CAMERA",
+    "INTERNET"
+]

@@ -35,6 +35,9 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
+          sed -i '/^#/d' requirements.txt
+          sed -i '/^$/d' requirements.txt
+          # Sadece temiz paketleri yükle
           pip install -r requirements.txt
           # pyproject.toml'daki bağımlılıkları da yükle
           pip install flet==0.22.0 python-dotenv requests pillow cryptography
