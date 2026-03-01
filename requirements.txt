@@ -1,11 +1,29 @@
-# requirements.txt - Android için DOĞRU VERSİYON
-toga-android==0.5.0
-gTTS==2.5.4
-SpeechRecognition==3.14.5
-loguru==0.7.3
-python-dotenv==1.2.1
-requests==2.32.5
-certifi==2026.1.4
-idna==3.11
-urllib3==2.6.3
+# requirements.txt - SADELEŞTİRİLMİŞ VERSİYON
+flet==0.22.0
+python-dotenv==1.0.1
+requests==2.32.3
+
+# API istemcileri
+google-generativeai==0.8.4
+groq==0.15.0
+
+# OCR ve Görüntü İşleme
+opencv-python==4.11.0.86
+pytesseract==0.3.13
+pillow==11.1.0
+easyocr==1.7.2
+mediapipe==0.10.21
 pyzbar==0.1.9
+
+# Ses (aioheaders KALDIRILDI!)
+SpeechRecognition==3.14.0
+gTTS==2.5.4
+edge-tts==7.2.0
+pvporcupine==3.0.3
+pygame==2.6.1
+sounddevice==0.5.1
+soundfile==0.13.1
+numpy
+
+# Diğer
+psutil==7.0.0
