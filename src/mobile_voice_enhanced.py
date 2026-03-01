@@ -1,4 +1,4 @@
-# src/mobile_voice_enhanced.py - TAMAMEN ÇALIŞAN VERSİYON
+# src/modules/mobile_voice_enhanced.py - ANDROID UYUMLU
 """
 A.N.N.A Mobile Gelişmiş Ses Motoru
 - 🎙️ Wake word (Jarvis, Bilgisayar, Alexa)
@@ -10,6 +10,7 @@ A.N.N.A Mobile Gelişmiş Ses Motoru
 """
 
 import os
+import sys
 import asyncio
 import tempfile
 import threading
@@ -18,6 +19,9 @@ import time
 import json
 from datetime import datetime
 from pathlib import Path
+
+# Android tespiti
+IS_ANDROID = 'android' in sys.platform or 'ANDROID_ARGUMENT' in os.environ
 
 # Ses tanıma
 try:
@@ -39,7 +43,7 @@ try:
 except:
     EDGE_AVAILABLE = False
 
-# Wake word
+# Wake word (Android'de çalışır)
 try:
     import pvporcupine
     PORCUPINE_AVAILABLE = True
@@ -53,7 +57,7 @@ try:
 except:
     PYGAME_AVAILABLE = False
 
-# Ses kayıt
+# Ses kayıt (Android'de sınırlı)
 try:
     import sounddevice as sd
     import soundfile as sf
@@ -69,6 +73,13 @@ class VoiceEngineEnhanced:
     """
     
     def __init__(self):
+        # Android'de farklı depolama
+        if IS_ANDROID:
+            self.data_dir = Path("/storage/emulated/0/ANNA/voice")
+        else:
+            self.data_dir = Path("data/voice")
+        self.data_dir.mkdir(parents=True, exist_ok=True)
+        
         # Temel bileşenler
         self.recognizer = sr.Recognizer() if SR_AVAILABLE else None
         self.microphone = None
@@ -81,11 +92,15 @@ class VoiceEngineEnhanced:
         self.wake_keywords = ["jarvis", "computer", "alexa", "bilgisayar"]
         self._init_wake_word()
         
-        # PYGAME MİXER'ı BAŞLAT (SES İÇİN ŞART!)
+        # PYGAME MİXER'ı BAŞLAT (Android'de farklı ayarlar)
         if PYGAME_AVAILABLE:
             try:
                 pygame.mixer.quit()
-                pygame.mixer.init(frequency=22050, size=-16, channels=2, buffer=512)
+                if IS_ANDROID:
+                    # Android için daha düşük kalite
+                    pygame.mixer.init(frequency=16000, size=-16, channels=1, buffer=256)
+                else:
+                    pygame.mixer.init(frequency=22050, size=-16, channels=2, buffer=512)
                 print("✅ Pygame mixer hazır")
             except Exception as e:
                 print(f"⚠️ Pygame mixer hatası: {e}")
@@ -97,8 +112,8 @@ class VoiceEngineEnhanced:
         self.sound_thread.start()
         
         # Ses ayarları
-        self.volume = 0.8  # 0.0 - 1.0
-        self.speed = 1.0    # 0.5 - 2.0
+        self.volume = 0.8
+        self.speed = 1.0
         self.muted = False
         self.language = 'tr'
         
@@ -113,8 +128,7 @@ class VoiceEngineEnhanced:
         
         # Konuşma geçmişi
         self.history = []
-        self.history_file = Path("data/voice_history.json")
-        self.history_file.parent.mkdir(parents=True, exist_ok=True)
+        self.history_file = self.data_dir / "voice_history.json"
         self._load_history()
         
         # İstatistikler
@@ -132,15 +146,21 @@ class VoiceEngineEnhanced:
         print(f"🔊 Edge-TTS: {'✅' if EDGE_AVAILABLE else '❌'}")
         print(f"🎵 Pygame: {'✅' if PYGAME_AVAILABLE else '❌'}")
         print(f"🎚️ Wake Word: {'✅' if PORCUPINE_AVAILABLE else '❌'}")
+        print(f"📱 Android: {'✅' if IS_ANDROID else '❌'}")
         print("="*50)
     
     def _init_microphone(self):
-        """Mikrofonu başlat ve kalibre et"""
+        """Mikrofonu başlat (Android'de farklı)"""
         if not SR_AVAILABLE:
             return
         
         try:
-            self.microphone = sr.Microphone()
+            if IS_ANDROID:
+                # Android'de mikrofon indeksi farklı olabilir
+                self.microphone = sr.Microphone(device_index=None)
+            else:
+                self.microphone = sr.Microphone()
+            
             with self.microphone as source:
                 print("🎤 Mikrofon kalibre ediliyor...")
                 self.recognizer.adjust_for_ambient_noise(source, duration=1)
@@ -151,14 +171,14 @@ class VoiceEngineEnhanced:
             print(f"❌ Mikrofon hatası: {e}")
     
     def _init_wake_word(self):
-        """Wake word sistemini başlat"""
+        """Wake word sistemini başlat (Android'de PICOVOICE_ACCESS_KEY gerekli)"""
         if not PORCUPINE_AVAILABLE:
-            print("⚠️ Porcupine yok, wake word çalışmaz")
             return
         
+        # PICOVOICE_ACCESS_KEY environment variable'dan alınır
         access_key = os.getenv("PICOVOICE_ACCESS_KEY")
         if not access_key:
-            print("⚠️ PICOVOICE_ACCESS_KEY yok")
+            print("⚠️ PICOVOICE_ACCESS_KEY yok, wake word çalışmaz")
             return
         
         try:

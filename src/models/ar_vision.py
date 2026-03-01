@@ -1,4 +1,4 @@
-# src/modules/ar_vision.py - AR + GELİŞMİŞ OCR
+# src/modules/ar_vision.py - ANDROID UYUMLU
 """
 A.N.N.A Mobile AR ve Gelişmiş Görüntü İşleme
 - 🕶️ Artırılmış Gerçeklik (AR) özellikleri
@@ -9,6 +9,7 @@ A.N.N.A Mobile AR ve Gelişmiş Görüntü İşleme
 """
 
 import os
+import sys
 import cv2
 import numpy as np
 import time
@@ -18,19 +19,22 @@ import threading
 import queue
 from datetime import datetime
 
+# Android tespiti
+IS_ANDROID = 'android' in sys.platform or 'ANDROID_ARGUMENT' in os.environ
+
 # OCR
 try:
     import pytesseract
     from PIL import Image
+    TESSERACT_AVAILABLE = True
+except:
+    TESSERACT_AVAILABLE = False
+
+try:
     import easyocr
     EASYOCR_AVAILABLE = True
 except:
     EASYOCR_AVAILABLE = False
-    try:
-        import pytesseract
-        TESSERACT_AVAILABLE = True
-    except:
-        TESSERACT_AVAILABLE = False
 
 # QR/Barkod
 try:
@@ -39,7 +43,7 @@ try:
 except:
     QR_AVAILABLE = False
 
-# MediaPipe (hafif AR için)
+# MediaPipe (Android'de çalışır)
 try:
     import mediapipe as mp
     MEDIAPIPE_AVAILABLE = True
@@ -56,7 +60,14 @@ class ARVision:
     """
     
     def __init__(self):
-        self.data_dir = Path("data/ar")
+        # Android'de depolama yolu farklı
+        if IS_ANDROID:
+            from android.storage import primary_external_storage_path
+            base_path = Path(primary_external_storage_path()) / "ANNA" / "data"
+            self.data_dir = base_path / "ar"
+        else:
+            self.data_dir = Path("data/ar")
+        
         self.data_dir.mkdir(parents=True, exist_ok=True)
         
         # Kamera durumu
@@ -75,29 +86,36 @@ class ARVision:
         }
         self.current_mode = 'ocr'
         
-        # EasyOCR (Türkçe + İngilizce)
+        # EasyOCR (Android'de çalışır)
         self.easyocr_reader = None
         if EASYOCR_AVAILABLE:
             try:
-                self.easyocr_reader = easyocr.Reader(['tr', 'en'])
+                self.easyocr_reader = easyocr.Reader(['tr', 'en'], gpu=False)
                 print("✅ EasyOCR hazır (Türkçe + İngilizce)")
             except:
                 pass
         
-        # Tesseract
+        # Tesseract (Android'de yol farklı)
         if not EASYOCR_AVAILABLE and TESSERACT_AVAILABLE:
-            if os.name == 'nt':
+            if IS_ANDROID:
+                # Android'de Tesseract yolu
+                possible_paths = [
+                    '/data/data/org.anna.mobile/files/tesseract',
+                    '/storage/emulated/0/ANNA/tesseract'
+                ]
+            else:
                 possible_paths = [
                     r'C:\Program Files\Tesseract-OCR\tesseract.exe',
                     r'C:\Program Files (x86)\Tesseract-OCR\tesseract.exe'
                 ]
-                for path in possible_paths:
-                    if os.path.exists(path):
-                        pytesseract.pytesseract.tesseract_cmd = path
-                        break
+            
+            for path in possible_paths:
+                if os.path.exists(path):
+                    pytesseract.pytesseract.tesseract_cmd = path
+                    break
             print("✅ Tesseract OCR hazır")
         
-        # MediaPipe
+        # MediaPipe (Android'de çalışır)
         if MEDIAPIPE_AVAILABLE:
             try:
                 self.mp_face_detection = mp.solutions.face_detection
@@ -122,18 +140,25 @@ class ARVision:
         
         print(f"📸 AR Vision Modülü başlatıldı")
         print(f"   Modlar: {', '.join(self.modes.values())}")
+        print(f"📱 Android: {'✅' if IS_ANDROID else '❌'}")
     
     # ============================================
     # KAMERA KONTROLÜ
     # ============================================
     
     def start_camera(self, callback=None):
-        """Kamerayı başlat"""
+        """Kamerayı başlat (Android'de farklı)"""
         if self.camera_active:
             return "Kamera zaten aktif"
         
         try:
-            self.cap = cv2.VideoCapture(0)
+            # Android'de kamera indeksi farklı olabilir
+            if IS_ANDROID:
+                # Arka kamera için 0, ön kamera için 1
+                self.cap = cv2.VideoCapture(0)
+            else:
+                self.cap = cv2.VideoCapture(0)
+            
             self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
             self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
             
@@ -214,7 +239,7 @@ class ARVision:
                 if results:
                     texts = []
                     for (bbox, text_part, prob) in results:
-                        if prob > 0.5:  # Güven eşiği
+                        if prob > 0.5:
                             texts.append(text_part)
                     text = " ".join(texts)
             except:
@@ -227,7 +252,6 @@ class ARVision:
                 gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                 _, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
                 
-                # OCR
                 text = pytesseract.image_to_string(thresh, lang='tur+eng')
             except:
                 pass
@@ -239,21 +263,22 @@ class ARVision:
         regions = []
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         
-        # MSER (Maximally Stable Extremal Regions) ile metin tespiti
-        mser = cv2.MSER_create()
-        regions_m, _ = mser.detectRegions(gray)
+        try:
+            mser = cv2.MSER_create()
+            regions_m, _ = mser.detectRegions(gray)
+            
+            for region in regions_m:
+                if len(region) > 0:
+                    x, y, w, h = cv2.boundingRect(region)
+                    if w > 20 and h > 10:
+                        regions.append({
+                            'bbox': (x, y, x+w, y+h),
+                            'type': 'text'
+                        })
+        except:
+            pass
         
-        for region in regions_m:
-            if len(region) > 0:
-                x, y, w, h = cv2.boundingRect(region)
-                # Küçük bölgeleri filtrele
-                if w > 20 and h > 10:
-                    regions.append({
-                        'bbox': (x, y, x+w, y+h),
-                        'type': 'text'
-                    })
-        
-        return regions[:10]  # İlk 10 bölge
+        return regions[:10]
     
     def scan_image(self, image_path: str) -> dict:
         """Resim dosyasını tara"""
@@ -362,7 +387,7 @@ class ARVision:
         return faces
     
     # ============================================
-    # NESNE TANIMA (BASİT)
+    # NESNE TANIMA
     # ============================================
     
     def _detect_objects(self, frame):
@@ -370,32 +395,33 @@ class ARVision:
         objects = []
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         
-        # Kontur tabanlı basit tespit
-        _, thresh = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY)
-        contours, _ = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        try:
+            _, thresh = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY)
+            contours, _ = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+            
+            for contour in contours:
+                area = cv2.contourArea(contour)
+                if area > 1000:
+                    x, y, w, h = cv2.boundingRect(contour)
+                    aspect_ratio = w / h if h > 0 else 0
+                    
+                    obj_type = 'object'
+                    if 0.8 < aspect_ratio < 1.2 and area > 5000:
+                        obj_type = 'square'
+                    elif aspect_ratio > 2:
+                        obj_type = 'rectangle'
+                    elif w < 30 and h < 30:
+                        obj_type = 'small'
+                    
+                    objects.append({
+                        'bbox': (x, y, x+w, y+h),
+                        'area': area,
+                        'type': obj_type
+                    })
+        except:
+            pass
         
-        for contour in contours:
-            area = cv2.contourArea(contour)
-            if area > 1000:  # Küçük nesneleri filtrele
-                x, y, w, h = cv2.boundingRect(contour)
-                aspect_ratio = w / h if h > 0 else 0
-                
-                # Basit sınıflandırma
-                obj_type = 'object'
-                if 0.8 < aspect_ratio < 1.2 and area > 5000:
-                    obj_type = 'square'
-                elif aspect_ratio > 2:
-                    obj_type = 'rectangle'
-                elif w < 30 and h < 30:
-                    obj_type = 'small'
-                
-                objects.append({
-                    'bbox': (x, y, x+w, y+h),
-                    'area': area,
-                    'type': obj_type
-                })
-        
-        return objects[:5]  # İlk 5 nesne
+        return objects[:5]
     
     # ============================================
     # RENK ANALİZİ
@@ -407,7 +433,6 @@ class ARVision:
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
         height, width = frame.shape[:2]
         
-        # Renk aralıkları
         color_ranges = {
             'kırmızı': ([0, 50, 50], [10, 255, 255]),
             'turuncu': ([10, 50, 50], [20, 255, 255]),
@@ -422,7 +447,7 @@ class ARVision:
             mask = cv2.inRange(hsv, np.array(lower), np.array(upper))
             ratio = cv2.countNonZero(mask) / (width * height) * 100
             
-            if ratio > 5:  # %5'ten fazlaysa
+            if ratio > 5:
                 colors.append({
                     'name': color_name,
                     'percent': round(ratio, 1)

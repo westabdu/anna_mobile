@@ -1,9 +1,24 @@
-# src/api/gemini.py - ALTERNATİF MODELLER EKLENDİ
+# src/api/gemini.py - ANDROID UYUMLU
+"""
+Google Gemini API - A.N.N.A Mobile için
+"""
+
 import os
+import sys
 import google.generativeai as genai
 from dotenv import load_dotenv
 
-load_dotenv()
+# Android tespiti
+IS_ANDROID = 'android' in sys.platform or 'ANDROID_ARGUMENT' in os.environ
+
+# .env dosyasını yükle (Android'de farklı yollar)
+if IS_ANDROID:
+    # Android'de .env dosyası APK içinde
+    dotenv_path = os.path.join(os.path.dirname(__file__), '..', '..', '.env')
+    load_dotenv(dotenv_path)
+else:
+    load_dotenv()
+
 
 class GeminiAI:
     """Gemini API - Otomatik Model Seçimli"""
@@ -21,6 +36,7 @@ class GeminiAI:
                 self.model = genai.GenerativeModel(self.model_name)
                 self.available = True
                 print(f"✅ Gemini AI hazır (Model: {self.model_name})")
+                print(f"📱 Android: {'✅' if IS_ANDROID else '❌'}")
             except Exception as e:
                 self.available = False
                 print(f"❌ Gemini başlatılamadı: {e}")
@@ -28,6 +44,7 @@ class GeminiAI:
             print("⚠️ GEMINI_API_KEY bulunamadı")
 
     def ask(self, prompt: str) -> str:
+        """Soru sor (senkron)"""
         if not self.available:
             return "Gemini API anahtarı eksik veya süresi dolmuş."
         
@@ -35,15 +52,21 @@ class GeminiAI:
             response = self.model.generate_content(prompt)
             return response.text
         except Exception as e:
+            error_str = str(e)
+            
             # API key hatası
-            if "API_KEY_INVALID" in str(e) or "expired" in str(e):
-                return "❌ Gemini API anahtarınızın süresi dolmuş. Lütfen https://aistudio.google.com/app/apikey adresinden yeni bir anahtar alın."
+            if "API_KEY_INVALID" in error_str or "expired" in error_str:
+                return "❌ Gemini API anahtarınızın süresi dolmuş. Lütfen yeni bir anahtar alın."
             
             # 404 hatası - model bulunamadı
-            if "404" in str(e) or "not found" in str(e).lower():
+            if "404" in error_str or "not found" in error_str.lower():
                 return self._try_alternative_model(prompt)
             
-            return f"❌ Gemini hatası: {e}"
+            # Network hatası
+            if "connection" in error_str.lower() or "timeout" in error_str.lower():
+                return "❌ İnternet bağlantısı yok veya API'ye erişilemiyor."
+            
+            return f"❌ Gemini hatası: {error_str[:100]}"
     
     def _try_alternative_model(self, prompt: str) -> str:
         """Alternatif Gemini modellerini dene"""

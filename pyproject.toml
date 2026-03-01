@@ -8,18 +8,25 @@ authors = [
 ]
 dependencies = [
     "flet==0.22.0",
+    "numpy==1.24.3",
+    "opencv-python-headless==4.9.0.80",
+    "mediapipe==0.10.8",
+    "easyocr==1.7.1",
+    "pytesseract==0.3.10",
+    "pyzbar==0.1.9",
+    "SpeechRecognition==3.10.4",
+    "gTTS==2.5.1",
+    "edge-tts==6.1.13",
+    "pygame==2.5.2",
+    "sounddevice==0.4.6",
+    "soundfile==0.12.1",
+    "pvporcupine==3.0.3",
+    "google-generativeai==0.7.2",
+    "groq==0.9.0",
+    "pillow==11.1.0",
     "python-dotenv==1.0.1",
     "requests==2.32.3",
-    "pillow==11.1.0",
-    "psutil==7.0.0",
-    "numpy",
-    "google-generativeai==0.8.4",
-    "groq==0.15.0",
-    "pytesseract==0.3.13",
-    "pyzbar==0.1.9",
-    "SpeechRecognition==3.14.0",
-    "gTTS==2.5.4",
-    "edge-tts==7.2.0"
+    "psutil==7.0.0"
 ]
 
 [tool.flet]
@@ -34,7 +41,18 @@ module = "main"
 
 [tool.flet.android]
 permissions = [
-    "RECORD_AUDIO",
     "CAMERA",
-    "INTERNET"
+    "RECORD_AUDIO",
+    "INTERNET",
+    "READ_EXTERNAL_STORAGE",
+    "WRITE_EXTERNAL_STORAGE",
+    "VIBRATE",
+    "WAKE_LOCK"
 ]
+
+# Android için özel derleme ayarları
+android = { 
+    "min_sdk_version": 21,
+    "target_sdk_version": 33,
+    "ndk_version": "25.1.8937393"
+}

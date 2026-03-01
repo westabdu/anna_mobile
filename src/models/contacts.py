@@ -1,18 +1,34 @@
-# src/modules/contacts.py
+# src/modules/contacts.py - ANDROID UYUMLU
 """
 Rehber yönetimi - Kişiler, arama, mesaj
 """
 
 import json
+import sys
+import os
 from pathlib import Path
 from datetime import datetime
+
+# Android tespiti
+IS_ANDROID = 'android' in sys.platform or 'ANDROID_ARGUMENT' in os.environ
 
 
 class ContactsManager:
     """Rehber yönetimi"""
     
     def __init__(self):
-        self.data_dir = Path("data/contacts")
+        # Android'de depolama yolu farklı
+        if IS_ANDROID:
+            try:
+                from android.storage import primary_external_storage_path
+                base_path = Path(primary_external_storage_path()) / "ANNA" / "data"
+                self.data_dir = base_path / "contacts"
+            except:
+                # Fallback
+                self.data_dir = Path("/storage/emulated/0/ANNA/data/contacts")
+        else:
+            self.data_dir = Path("data/contacts")
+        
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self.contacts_file = self.data_dir / "contacts.json"
         self.contacts = self._load_contacts()
@@ -20,8 +36,11 @@ class ContactsManager:
     def _load_contacts(self):
         """Rehberi yükle"""
         if self.contacts_file.exists():
-            with open(self.contacts_file, 'r', encoding='utf-8') as f:
-                return json.load(f)
+            try:
+                with open(self.contacts_file, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            except:
+                return self._init_contacts()
         return self._init_contacts()
     
     def _init_contacts(self):
@@ -52,8 +71,11 @@ class ContactsManager:
     
     def _save_contacts(self):
         """Rehberi kaydet"""
-        with open(self.contacts_file, 'w', encoding='utf-8') as f:
-            json.dump(self.contacts, f, indent=2, ensure_ascii=False)
+        try:
+            with open(self.contacts_file, 'w', encoding='utf-8') as f:
+                json.dump(self.contacts, f, indent=2, ensure_ascii=False)
+        except Exception as e:
+            print(f"❌ Rehber kaydedilemedi: {e}")
     
     def get_all_contacts(self) -> list:
         """Tüm kişileri getir"""
@@ -161,17 +183,35 @@ class ContactsManager:
         return "❌ Kişi bulunamadı"
     
     def call_contact(self, contact_id: int) -> str:
-        """Ara (simülasyon)"""
+        """Ara (Android'de intent kullan)"""
         for contact in self.contacts:
             if contact['id'] == contact_id:
-                return f"📞 {contact['name']} aranıyor... ({contact['phone']})"
+                if IS_ANDROID:
+                    try:
+                        # Android intent ile arama
+                        from android import intent
+                        intent.call(contact['phone'])
+                        return f"📞 {contact['name']} aranıyor..."
+                    except:
+                        return f"📞 {contact['name']} aranıyor... ({contact['phone']})"
+                else:
+                    return f"📞 {contact['name']} aranıyor... ({contact['phone']})"
         
         return "❌ Kişi bulunamadı"
     
     def message_contact(self, contact_id: int, message: str) -> str:
-        """Mesaj gönder (simülasyon)"""
+        """Mesaj gönder (Android'de intent kullan)"""
         for contact in self.contacts:
             if contact['id'] == contact_id:
-                return f"💬 {contact['name']}'e mesaj gönderildi: {message[:30]}..."
+                if IS_ANDROID:
+                    try:
+                        # Android intent ile mesaj
+                        from android import intent
+                        intent.sms(contact['phone'], message)
+                        return f"💬 {contact['name']}'e mesaj gönderiliyor..."
+                    except:
+                        return f"💬 {contact['name']}'e mesaj gönderildi: {message[:30]}..."
+                else:
+                    return f"💬 {contact['name']}'e mesaj gönderildi: {message[:30]}..."
         
         return "❌ Kişi bulunamadı"

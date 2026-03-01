@@ -1,4 +1,4 @@
-# main.py - A.N.N.A Mobile Ultimate (AR + Gelişmiş OCR)
+# main.py - A.N.N.A Mobile Ultimate (ANDROID UYUMLU) - HATALAR DÜZELTİLDİ
 """
 A.N.N.A Mobile Ultimate - Android için optimize edilmiş asistan
 - 🔐 Gelişmiş giriş sistemi (şifre + biyometrik)
@@ -12,35 +12,41 @@ A.N.N.A Mobile Ultimate - Android için optimize edilmiş asistan
 - 🎤 Sesli komut + wake word
 - 🕶️ Artırılmış Gerçeklik (AR)
 - 🎨 3 farklı mavi tema
+- ℹ️ Hakkında sekmesi
 """
 
 import flet as ft
 import threading
 import time
 import random
-from datetime import datetime
+import sys
 import os
+from datetime import datetime
 from pathlib import Path
 
+# Android tespiti
+IS_ANDROID = 'android' in sys.platform or 'ANDROID_ARGUMENT' in os.environ
+
 # ============================================
-# MOBİL MODÜLLER
+# MOBİL MODÜLLER (Android uyumlu)
 # ============================================
 from src.auth.login import MobileAuth
-from src.mobile_voice_enhanced import VoiceEngineEnhanced
+from src.models.mobile_voice_enhanced import VoiceEngineEnhanced
 from src.utils.theme import MobileTheme
 
-# API modülleri
+# API modülleri (Android uyumlu)
 from src.api.gemini import GeminiAI
 from src.api.groq import GroqAI
 from src.api.weather import WeatherAPI
 from src.api.news import NewsAPI
 
-# Mobil özel modüller
+# Mobil özel modüller (Android uyumlu)
 from src.models.phone import PhoneInfo
 from src.models.reminders import ReminderManager
 from src.models.contacts import ContactsManager
 from src.models.ocr import OCRManager
-from src.models.ar_vision import ARVision  # YENİ AR MODÜLÜ
+from src.models.ar_vision import ARVision
+from src.models.about import AboutManager  # YENİ!
 
 # ============================================
 # TEMA AYARLARI
@@ -48,7 +54,7 @@ from src.models.ar_vision import ARVision  # YENİ AR MODÜLÜ
 colors = MobileTheme.current
 
 # ============================================
-# GİRİŞ EKRANI (Aynı)
+# GİRİŞ EKRANI
 # ============================================
 class LoginScreen(ft.Container):
     def __init__(self, page, on_success):
@@ -294,13 +300,19 @@ class LoginScreen(ft.Container):
 # ANA UYGULAMA
 # ============================================
 def main(page: ft.Page):
-    # Sayfa ayarları
+    # Sayfa ayarları (Android için optimize)
     page.title = "A.N.N.A Mobile"
     page.theme_mode = ft.ThemeMode.DARK
     page.bgcolor = colors["bg_primary"]
     page.padding = 0
-    page.window_width = 400
-    page.window_height = 800
+    
+    # Android ekran boyutları
+    if IS_ANDROID:
+        page.window_width = None  # Tam ekran
+        page.window_height = None
+    else:
+        page.window_width = 400
+        page.window_height = 800
     
     # ============================================
     # DURUM DEĞİŞKENLERİ
@@ -331,7 +343,7 @@ def main(page: ft.Page):
         current_tab = current_tab_param
         current_theme = current_theme_param
         
-        # Core modülleri başlat
+        # Core modülleri başlat (Android uyumlu)
         voice = VoiceEngineEnhanced()
         voice.set_volume(0.8)
         voice.set_speed(1.2)
@@ -343,9 +355,10 @@ def main(page: ft.Page):
         ocr = OCRManager()
         weather_api = WeatherAPI()
         news_api = NewsAPI()
-        ar_vision = ARVision()  # YENİ AR MODÜLÜ
+        ar_vision = ARVision()
+        about = AboutManager()  # YENİ!
         
-        # AI seçimi
+        # AI seçimi (önce Groq, yoksa Gemini)
         groq = GroqAI()
         gemini = GeminiAI()
         
@@ -500,7 +513,7 @@ def main(page: ft.Page):
             
             threading.Thread(target=listen_thread, daemon=True).start()
         
-        # Komut işleme
+        # Komut işleme (senkron)
         def process_command(text: str):
             text_lower = text.lower()
             
@@ -575,13 +588,13 @@ def main(page: ft.Page):
                 add_message("ANNA", result, is_user=False)
                 voice.speak("Rehber listeleniyor...")
             
-            # OCR (gelişmiş)
+            # OCR
             elif "fotoğraf oku" in text_lower or "resim oku" in text_lower:
                 add_message("ANNA", "📸 Kameradan fotoğraf çekiliyor...", is_user=False)
                 voice.speak("Kameradan fotoğraf çekiyorum, lütfen bekleyin.")
                 
                 def ocr_thread():
-                    result = ocr.camera_scan()
+                    result = ocr.camera_to_text()
                     if result.get('success'):
                         add_message("ANNA", f"📝 {result['text'][:200]}", is_user=False)
                     else:
@@ -673,7 +686,7 @@ def main(page: ft.Page):
             page.clean()
             show_main_app(is_listening, wake_active, wave_active, current_tab, current_theme)
         
-        # Sekme değiştirici (AR SEKMESİ EKLENDİ)
+        # Sekme değiştirici
         def change_tab(index):
             nonlocal current_tab
             current_tab = index
@@ -688,8 +701,10 @@ def main(page: ft.Page):
                 content_area.content = build_contacts_tab()
             elif index == 4:
                 content_area.content = build_settings_tab()
-            elif index == 5:  # YENİ AR SEKMESİ
+            elif index == 5:
                 content_area.content = build_ar_tab()
+            elif index == 6:
+                content_area.content = build_about_tab()
             
             page.update()
         
@@ -971,14 +986,7 @@ def main(page: ft.Page):
                 )
             ], scroll=ft.ScrollMode.AUTO)
         
-        # ============================================
-        # YENİ AR TAB'I
-        # ============================================
-        
         def build_ar_tab():
-            """AR ve Gelişmiş OCR tab'ı"""
-            
-            # Kamera görüntüsü placeholder
             camera_view = ft.Container(
                 content=ft.Text("📷 Kamera görüntüsü burada olacak\n(AR aktif değil)", 
                                color=colors["text_muted"], size=12, text_align=ft.TextAlign.CENTER),
@@ -988,7 +996,6 @@ def main(page: ft.Page):
                 alignment=ft.alignment.center,
             )
             
-            # Sonuç alanı
             result_text = ft.Container(
                 content=ft.Text("Sonuçlar burada görünecek", color=colors["text_muted"]),
                 bgcolor=colors["glass"],
@@ -997,7 +1004,6 @@ def main(page: ft.Page):
                 height=120,
             )
             
-            # Mod seçici
             mode_dropdown = ft.Dropdown(
                 options=[
                     ft.dropdown.Option("ocr", "📝 OCR (Yazı Tanıma)"),
@@ -1012,7 +1018,6 @@ def main(page: ft.Page):
                 width=200,
             )
             
-            # Butonlar
             def start_ar(e):
                 result = ar_vision.start_camera()
                 camera_view.content = ft.Text("📷 Kamera aktif - AR çalışıyor", 
@@ -1056,7 +1061,6 @@ def main(page: ft.Page):
                 show_notification(result, "info")
             
             def quick_scan(e):
-                """Hızlı OCR taraması"""
                 if not ar_vision.camera_active:
                     show_notification("❌ Önce kamerayı başlatın", "error")
                     return
@@ -1066,8 +1070,6 @@ def main(page: ft.Page):
                 if isinstance(result, dict) and result.get('scan', {}).get('text'):
                     text = result['scan']['text'][:200]
                     result_text.content = ft.Text(f"📝 {text}", color=colors["text"])
-                    
-                    # Konuşma ile de söyle
                     voice.speak(f"Okunan metin: {text[:50]}")
                 page.update()
             
@@ -1079,11 +1081,9 @@ def main(page: ft.Page):
                         ft.Divider(height=1, color=colors["primary"] + "40"),
                         ft.Container(height=10),
                         
-                        # Kamera görüntüsü
                         camera_view,
                         ft.Container(height=10),
                         
-                        # Ana kontrol butonları
                         ft.Row([
                             ft.ElevatedButton(
                                 "▶️ Başlat",
@@ -1111,7 +1111,6 @@ def main(page: ft.Page):
                         
                         ft.Container(height=10),
                         
-                        # İşlem butonları
                         ft.Row([
                             ft.ElevatedButton(
                                 "📸 Çek & Tara",
@@ -1137,7 +1136,6 @@ def main(page: ft.Page):
                         
                         ft.Container(height=10),
                         
-                        # Mod seçici
                         ft.Row([
                             ft.Text("Mod:", color=colors["text"], size=12),
                             mode_dropdown,
@@ -1151,13 +1149,11 @@ def main(page: ft.Page):
                         
                         ft.Container(height=10),
                         
-                        # Sonuçlar
                         ft.Text("📊 TARAMA SONUCU", size=14, weight=ft.FontWeight.BOLD, color=colors["text"]),
                         result_text,
                         
                         ft.Container(height=5),
                         
-                        # Bilgi notu
                         ft.Text(
                             "💡 QR kod, barkod, yazı ve renkleri otomatik algılar",
                             color=colors["text_muted"],
@@ -1165,6 +1161,137 @@ def main(page: ft.Page):
                             italic=True,
                         ),
                     ]),
+                    padding=15,
+                )
+            ], scroll=ft.ScrollMode.AUTO)
+        
+        # ============================================
+        # YENİ HAKKINDA TAB'I
+        # ============================================
+        
+        def build_about_tab():
+            """Hakkında sekmesi"""
+            return ft.Column([
+                ft.Container(
+                    content=ft.Column([
+                        ft.Text("🤖 HAKKINDA", size=18, weight=ft.FontWeight.BOLD, color=colors["text"]),
+                        ft.Divider(height=1, color=colors["primary"] + "40"),
+                        ft.Container(height=20),
+
+                        # Logo
+                        ft.Container(
+                            content=ft.Stack([
+                                ft.Container(
+                                    width=100,
+                                    height=100,
+                                    border_radius=50,
+                                    gradient=ft.RadialGradient(
+                                        colors=[colors["accent"] + "80", "transparent"],
+                                    ),
+                                ),
+                                ft.Container(
+                                    content=ft.Icon(ft.icons.AUTO_AWESOME, color=colors["accent_light"], size=60),
+                                    width=100,
+                                    height=100,
+                                    alignment=ft.alignment.center,
+                                ),
+                            ]),
+                            alignment=ft.alignment.center,
+                        ),
+                        ft.Container(height=20),
+
+                        # Uygulama adı
+                        ft.Text("A.N.N.A Mobile", size=24, weight=ft.FontWeight.BOLD, color=colors["text"]),
+                        ft.Text(f"Versiyon {about.version}", size=14, color=colors["text_muted"], italic=True),
+                        ft.Container(height=30),
+
+                        # Bilgi Kartları
+                        ft.Container(
+                            content=ft.Column([
+                                ft.Row([
+                                    ft.Icon(ft.icons.INFO, color=colors["primary"], size=20),
+                                    ft.Text("Geliştirici: ", size=14, color=colors["text"], weight=ft.FontWeight.BOLD),
+                                    ft.Text(about.developer, color=colors["text_secondary"], size=12),
+                                ]),
+                                ft.Divider(height=1, color=colors["glass"] + "40"),
+                                ft.Row([
+                                    ft.Icon(ft.icons.CALENDAR_MONTH, color=colors["primary"], size=20),
+                                    ft.Text("Tarih: ", size=14, color=colors["text"], weight=ft.FontWeight.BOLD),
+                                    ft.Text(about.build_date, color=colors["text_secondary"], size=12),
+                                ]),
+                                ft.Divider(height=1, color=colors["glass"] + "40"),
+                                ft.Row([
+                                    ft.Icon(ft.icons.PHONE_ANDROID, color=colors["success"], size=20),
+                                    ft.Text("Uyumluluk: ", size=14, color=colors["text"], weight=ft.FontWeight.BOLD),
+                                    ft.Text(about.platform, color=colors["text_secondary"], size=12),
+                                ]),
+                            ]),
+                            bgcolor=colors["glass"],
+                            border_radius=15,
+                            padding=15,
+                        ),
+                        ft.Container(height=20),
+
+                        # Özellikler
+                        ft.Container(
+                            content=ft.Column([
+                                ft.Text("📋 ÖZELLİKLER", size=14, weight=ft.FontWeight.BOLD, color=colors["text"]),
+                                ft.Divider(height=1, color=colors["primary"] + "40"),
+                                ft.Container(height=5),
+
+                                ft.Text("• 🔐 Gelişmiş giriş sistemi", color=colors["text_secondary"], size=12),
+                                ft.Text("• 🤖 Yapay Zeka (Gemini/Groq)", color=colors["text_secondary"], size=12),
+                                ft.Text("• 🌤️ Hava durumu", color=colors["text_secondary"], size=12),
+                                ft.Text("• 📱 Telefon bilgileri", color=colors["text_secondary"], size=12),
+                                ft.Text("• 👤 Rehber yönetimi", color=colors["text_secondary"], size=12),
+                                ft.Text("• 📸 OCR ve AR", color=colors["text_secondary"], size=12),
+                                ft.Text("• ⏰ Hatırlatıcılar", color=colors["text_secondary"], size=12),
+                                ft.Text("• 📰 Haberler", color=colors["text_secondary"], size=12),
+                                ft.Text("• 🎤 Sesli komut", color=colors["text_secondary"], size=12),
+                            ]),
+                            bgcolor=colors["glass"],
+                            border_radius=15,
+                            padding=15,
+                        ),
+                        ft.Container(height=20),
+
+                        # Lisans
+                        ft.Container(
+                            content=ft.Column([
+                                ft.Text("📄 LİSANS", size=14, weight=ft.FontWeight.BOLD, color=colors["text"]),
+                                ft.Divider(height=1, color=colors["primary"] + "40"),
+                                ft.Container(height=5),
+                                ft.Text("Bu uygulama MIT Lisansı ile lisanslanmıştır.", color=colors["text_secondary"], size=12),
+                                ft.Text("Telif Hakkı (c) 2025 Anna Mobile Ekibi", color=colors["text_secondary"], size=12),
+                            ]),
+                            bgcolor=colors["glass"],
+                            border_radius=15,
+                            padding=15,
+                        ),
+                        ft.Container(height=20),
+                        
+                        # İletişim
+                        ft.Row([
+                            ft.IconButton(
+                                icon=ft.icons.EMAIL,
+                                icon_color=colors["primary"],
+                                tooltip="E-posta ile iletişim",
+                                on_click=lambda _: show_notification("İletişim: github.com/westabdu", "info"),
+                            ),
+                            ft.IconButton(
+                                icon=ft.icons.CODE,
+                                icon_color=colors["secondary"],
+                                tooltip="GitHub sayfası",
+                                on_click=lambda _: show_notification("GitHub: @westabdu", "info"),
+                            ),
+                            ft.IconButton(
+                                icon=ft.icons.SHARE,
+                                icon_color=colors["accent"],
+                                tooltip="Paylaş",
+                                on_click=lambda _: show_notification("A.N.N.A Mobile v2.0", "info"),
+                            ),
+                        ], alignment=ft.MainAxisAlignment.CENTER),
+                    ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
                     padding=15,
                 )
             ], scroll=ft.ScrollMode.AUTO)
@@ -1300,7 +1427,7 @@ def main(page: ft.Page):
             padding=10, on_click=send_message,
         )
         
-        # Alt navigasyon (6 sekme - AR EKLENDİ)
+        # Alt navigasyon (7 sekme)
         bottom_nav = ft.Container(
             content=ft.Row([
                 ft.Container(
@@ -1350,6 +1477,14 @@ def main(page: ft.Page):
                     ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=2),
                     expand=True,
                     on_click=lambda _: change_tab(4),
+                ),
+                ft.Container(
+                    content=ft.Column([
+                        ft.Icon(ft.icons.INFO, color=colors["primary"] if current_tab == 6 else colors["text_muted"], size=20),
+                        ft.Text("Hakkında", color=colors["primary"] if current_tab == 6 else colors["text_muted"], size=9),
+                    ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=2),
+                    expand=True,
+                    on_click=lambda _: change_tab(6),
                 ),
             ]),
             bgcolor=colors["glass"], padding=8,

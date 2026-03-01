@@ -1,19 +1,41 @@
+# ============================================
+# A.N.N.A MOBILE - ANDROİD BUILD
+# ============================================
+
+# TEMEL (ZORUNLU)
+flet==0.22.0
 python-dotenv==1.0.1
 requests==2.32.3
-google-generativeai==0.8.4
-groq==0.15.0
-opencv-python==4.11.0.86
-pytesseract==0.3.13
 pillow==11.1.0
-easyocr==1.7.2
-mediapipe==0.10.21
-pyzbar==0.1.9
-SpeechRecognition==3.14.0
-gTTS==2.5.4
-edge-tts==7.2.0
-pvporcupine==3.0.3
-pygame==2.6.1
-sounddevice==0.5.1
-soundfile==0.13.1
-numpy
 psutil==7.0.0
+
+# ============================================
+# GÖRÜNTÜ İŞLEME (AR + OCR)
+# ============================================
+numpy==1.24.3
+opencv-python-headless==4.9.0.80
+mediapipe==0.10.8
+
+# ============================================
+# OCR (ÜÇ KATMANLI)
+# ============================================
+easyocr==1.7.1
+pytesseract==0.3.10
+pyzbar==0.1.9
+
+# ============================================
+# SES
+# ============================================
+SpeechRecognition==3.10.4
+gTTS==2.5.1
+edge-tts==6.1.13
+pygame==2.5.2
+pvporcupine==3.0.3
+sounddevice==0.4.6
+soundfile==0.12.1
+
+# ============================================
+# API İSTEMCİLERİ
+# ============================================
+google-generativeai==0.7.2
+groq==0.9.0

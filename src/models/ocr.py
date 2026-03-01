@@ -1,14 +1,26 @@
-# src/modules/ocr.py
+# src/modules/ocr.py - ANDROID UYUMLU
 """
 Optik Karakter Tanıma (OCR) - Fotoğraftan yazı okuma
 """
 
 import os
+import sys
 import tempfile
 from pathlib import Path
 import base64
 import time
 
+# Android tespiti
+IS_ANDROID = 'android' in sys.platform or 'ANDROID_ARGUMENT' in os.environ
+
+# EasyOCR (Android'de çalışır)
+try:
+    import easyocr
+    EASYOCR_AVAILABLE = True
+except:
+    EASYOCR_AVAILABLE = False
+
+# Tesseract (Android'de zor)
 try:
     import pytesseract
     from PIL import Image
@@ -16,6 +28,7 @@ try:
 except:
     TESSERACT_AVAILABLE = False
 
+# OpenCV (Android'de çalışır)
 try:
     import cv2
     import numpy as np
@@ -28,84 +41,98 @@ class OCRManager:
     """OCR ile fotoğraftan yazı okuma"""
     
     def __init__(self):
-        self.data_dir = Path("data/ocr")
+        # Android'de depolama yolu farklı
+        if IS_ANDROID:
+            try:
+                from android.storage import primary_external_storage_path
+                base_path = Path(primary_external_storage_path()) / "ANNA" / "data"
+                self.data_dir = base_path / "ocr"
+            except:
+                self.data_dir = Path("/storage/emulated/0/ANNA/data/ocr")
+        else:
+            self.data_dir = Path("data/ocr")
+        
         self.data_dir.mkdir(parents=True, exist_ok=True)
         
-        # Tesseract yolunu ayarla (Windows için)
-        if os.name == 'nt':
-            possible_paths = [
-                r'C:\Program Files\Tesseract-OCR\tesseract.exe',
-                r'C:\Program Files (x86)\Tesseract-OCR\tesseract.exe'
-            ]
+        # EasyOCR (birincil)
+        self.easyocr_reader = None
+        if EASYOCR_AVAILABLE:
+            try:
+                self.easyocr_reader = easyocr.Reader(['tr', 'en'], gpu=False)
+                print("✅ EasyOCR hazır (Türkçe + İngilizce)")
+            except Exception as e:
+                print(f"⚠️ EasyOCR yüklenemedi: {e}")
+        
+        # Tesseract (ikincil)
+        if not EASYOCR_AVAILABLE and TESSERACT_AVAILABLE:
+            if IS_ANDROID:
+                # Android'de Tesseract yolu
+                possible_paths = [
+                    '/data/data/org.anna.mobile/files/tesseract/tesseract',
+                    '/storage/emulated/0/ANNA/tesseract/tesseract'
+                ]
+            else:
+                possible_paths = [
+                    r'C:\Program Files\Tesseract-OCR\tesseract.exe',
+                    r'C:\Program Files (x86)\Tesseract-OCR\tesseract.exe'
+                ]
+            
             for path in possible_paths:
                 if os.path.exists(path):
                     pytesseract.pytesseract.tesseract_cmd = path
                     break
+            print("✅ Tesseract OCR hazır")
         
-        print(f"📸 OCR Modülü: {'✅' if TESSERACT_AVAILABLE else '❌'}")
+        print(f"📸 OCR Modülü: {'✅ EasyOCR' if EASYOCR_AVAILABLE else '✅ Tesseract' if TESSERACT_AVAILABLE else '❌'}")
         print(f"🎥 OpenCV: {'✅' if CV2_AVAILABLE else '❌'}")
+        print(f"📱 Android: {'✅' if IS_ANDROID else '❌'}")
     
-    def image_to_text(self, image_path: str, lang: str = 'tur') -> str:
-        """Resimdeki yazıyı oku"""
-        if not TESSERACT_AVAILABLE:
-            return "❌ Tesseract OCR yüklü değil"
+    def image_to_text(self, image_path: str, lang: str = 'tr') -> dict:
+        """Resimdeki yazıyı oku (gelişmiş)"""
+        result = {
+            'success': False,
+            'text': '',
+            'method': 'none',
+            'error': None
+        }
         
-        try:
-            # Resmi aç
-            image = Image.open(image_path)
-            
-            # OCR uygula
-            text = pytesseract.image_to_string(image, lang=lang)
-            
-            if text.strip():
-                return f"📝 **Okunan Metin:**\n\n{text.strip()}"
-            else:
-                return "📭 Resimde yazı bulunamadı"
-                
-        except Exception as e:
-            return f"❌ OCR hatası: {e}"
-    
-    def image_to_text_with_preprocessing(self, image_path: str, lang: str = 'tur') -> str:
-        """Ön işleme ile OCR (daha iyi sonuç)"""
-        if not TESSERACT_AVAILABLE or not CV2_AVAILABLE:
-            return "❌ Tesseract veya OpenCV yüklü değil"
+        # EasyOCR dene
+        if EASYOCR_AVAILABLE and self.easyocr_reader:
+            try:
+                img = cv2.imread(image_path)
+                if img is not None:
+                    results = self.easyocr_reader.readtext(img)
+                    if results:
+                        texts = [r[1] for r in results]
+                        result['text'] = " ".join(texts)
+                        result['success'] = True
+                        result['method'] = 'easyocr'
+                        return result
+            except Exception as e:
+                result['error'] = str(e)
         
-        try:
-            # OpenCV ile resmi oku
-            img = cv2.imread(image_path)
-            
-            # Gri tonlamaya çevir
-            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            
-            # Gürültü azalt
-            denoised = cv2.medianBlur(gray, 3)
-            
-            # Threshold uygula
-            _, thresh = cv2.threshold(denoised, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-            
-            # Geçici dosyaya kaydet
-            with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as f:
-                temp_path = f.name
-                cv2.imwrite(temp_path, thresh)
-            
-            # OCR uygula
-            text = pytesseract.image_to_string(temp_path, lang=lang)
-            
-            # Temizlik
-            os.unlink(temp_path)
-            
-            if text.strip():
-                return f"📝 **Okunan Metin (İyileştirilmiş):**\n\n{text.strip()}"
-            else:
-                return "📭 Resimde yazı bulunamadı"
-                
-        except Exception as e:
-            return f"❌ OCR hatası: {e}"
+        # Tesseract dene
+        if TESSERACT_AVAILABLE and not result['success']:
+            try:
+                from PIL import Image
+                image = Image.open(image_path)
+                text = pytesseract.image_to_string(image, lang='tur+eng')
+                if text.strip():
+                    result['text'] = text.strip()
+                    result['success'] = True
+                    result['method'] = 'tesseract'
+            except Exception as e:
+                result['error'] = str(e)
+        
+        if not result['success']:
+            result['text'] = "📭 Resimde yazı bulunamadı"
+        
+        return result
     
-    def camera_to_text(self, duration: int = 3) -> str:
+    def camera_to_text(self, duration: int = 3) -> dict:
         """Kameradan fotoğraf çek ve oku"""
         if not CV2_AVAILABLE:
-            return "❌ OpenCV yüklü değil"
+            return {'success': False, 'text': "❌ OpenCV yüklü değil"}
         
         try:
             # Kamerayı aç
@@ -119,71 +146,32 @@ class OCRManager:
             cap.release()
             
             if not ret:
-                return "❌ Kamera açılamadı"
+                return {'success': False, 'text': "❌ Kamera açılamadı"}
             
             # Geçici dosyaya kaydet
             temp_file = self.data_dir / "camera_capture.jpg"
             cv2.imwrite(str(temp_file), frame)
             
             # OCR uygula
-            return self.image_to_text_with_preprocessing(str(temp_file))
+            result = self.image_to_text(str(temp_file))
+            
+            # Geçici dosyayı temizle
+            try:
+                temp_file.unlink()
+            except:
+                pass
+            
+            return result
             
         except Exception as e:
-            return f"❌ Kamera hatası: {e}"
+            return {'success': False, 'text': f"❌ Kamera hatası: {e}"}
     
-    def base64_to_text(self, base64_image: str, lang: str = 'tur') -> str:
-        """Base64 formatındaki resmi oku"""
-        if not TESSERACT_AVAILABLE:
-            return "❌ Tesseract OCR yüklü değil"
-        
-        try:
-            # Base64'ü decode et
-            image_data = base64.b64decode(base64_image.split(',')[-1])
-            
-            # Geçici dosyaya kaydet
-            with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as f:
-                f.write(image_data)
-                temp_path = f.name
-            
-            # OCR uygula
-            text = self.image_to_text_with_preprocessing(temp_path, lang)
-            
-            # Temizlik
-            os.unlink(temp_path)
-            
-            return text
-            
-        except Exception as e:
-            return f"❌ OCR hatası: {e}"
-    
-    def detect_language(self, image_path: str) -> str:
-        """Resimdeki dil algılama"""
-        if not TESSERACT_AVAILABLE:
-            return "❌ Tesseract OCR yüklü değil"
-        
-        try:
-            # Önce Türkçe dene
-            text_tr = self.image_to_text(image_path, 'tur')
-            
-            # Sonra İngilizce dene
-            text_en = self.image_to_text(image_path, 'eng')
-            
-            # Hangi dilde daha çok karakter varsa onu seç
-            if len(text_tr) > len(text_en):
-                return "🇹🇷 Türkçe"
-            else:
-                return "🇬🇧 İngilizce"
-                
-        except Exception as e:
-            return f"❌ Dil algılama hatası: {e}"
+    def scan_image_file(self, image_path: str) -> dict:
+        """Resim dosyasını tara"""
+        return self.image_to_text(image_path)
     
     def get_available_languages(self) -> list:
         """Kullanılabilir dilleri listele"""
-        if not TESSERACT_AVAILABLE:
-            return []
-        
-        try:
-            languages = pytesseract.get_languages()
-            return languages
-        except:
-            return ['tur', 'eng']
+        if EASYOCR_AVAILABLE:
+            return ['tr', 'en', 'de', 'fr', 'es']
+        return ['tur', 'eng']

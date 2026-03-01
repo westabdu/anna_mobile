@@ -1,13 +1,22 @@
-# src/api/weather.py - SENKRON VERSİYON (DÜZELTİLMİŞ)
+# src/api/weather.py - ANDROID UYUMLU
 """
 Hava Durumu API - Senkron versiyon
 """
 
 import os
+import sys
 import requests
 from dotenv import load_dotenv
 
-load_dotenv()
+# Android tespiti
+IS_ANDROID = 'android' in sys.platform or 'ANDROID_ARGUMENT' in os.environ
+
+# .env dosyasını yükle
+if IS_ANDROID:
+    dotenv_path = os.path.join(os.path.dirname(__file__), '..', '..', '.env')
+    load_dotenv(dotenv_path)
+else:
+    load_dotenv()
 
 
 class WeatherAPI:
@@ -19,6 +28,7 @@ class WeatherAPI:
         
         if self.api_key:
             print("✅ Weather API hazır")
+            print(f"📱 Android: {'✅' if IS_ANDROID else '❌'}")
         else:
             print("⚠️ OPENWEATHER_API_KEY bulunamadı")
     
@@ -36,7 +46,7 @@ class WeatherAPI:
                 'lang': 'tr'
             }
             
-            response = requests.get(url, params=params, timeout=5)
+            response = requests.get(url, params=params, timeout=10)
             
             if response.status_code == 200:
                 data = response.json()
@@ -83,7 +93,7 @@ class WeatherAPI:
                 'lang': 'tr'
             }
             
-            response = requests.get(url, params=params, timeout=5)
+            response = requests.get(url, params=params, timeout=10)
             
             if response.status_code == 200:
                 data = response.json()

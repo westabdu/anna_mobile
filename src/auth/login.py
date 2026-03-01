@@ -1,4 +1,4 @@
-# src/auth/login.py - GELİŞMİŞ VERSİYON (Varsayılan Şifre Düzeltildi)
+# src/auth/login.py - ANDROID UYUMLU
 """
 A.N.N.A Mobile - Gelişmiş Giriş Sistemi
 - 🔢 PIN Kodu (4-6 haneli)
@@ -14,16 +14,28 @@ import hashlib
 import json
 import time
 import os
+import sys
 import random
 from pathlib import Path
 from datetime import datetime, timedelta
+
+# Android tespiti
+IS_ANDROID = 'android' in sys.platform or 'ANDROID_ARGUMENT' in os.environ
 
 
 class MobileAuth:
     """Gelişmiş mobil giriş yöneticisi"""
     
     def __init__(self):
-        self.data_dir = Path("data/auth")
+        # Android'de depolama yolu farklı
+        if IS_ANDROID:
+            # Android'de uygulama özel depolama
+            from android.storage import primary_external_storage_path
+            base_path = Path(primary_external_storage_path()) / "ANNA" / "data"
+            self.data_dir = base_path / "auth"
+        else:
+            self.data_dir = Path("data/auth")
+        
         self.data_dir.mkdir(parents=True, exist_ok=True)
         
         # Dosyalar
@@ -125,17 +137,18 @@ class MobileAuth:
             pass
     
     def _check_biometric_support(self) -> bool:
-        """Biyometrik destek kontrolü"""
+        """Biyometrik destek kontrolü (Android için)"""
         try:
-            # Android için
-            import android
-            return True
+            if IS_ANDROID:
+                # Android biyometrik API'si
+                from android import biometric
+                return biometric.is_available()
+            return True  # Bilgisayar için simülasyon
         except:
-            # Bilgisayar için simülasyon
-            return True
+            return False
     
     # ============================================
-    # 1. PIN KODU (4-6 HANE)
+    # PIN KODU (4-6 HANE)
     # ============================================
     
     def set_pin(self, pin: str) -> tuple:
@@ -177,12 +190,11 @@ class MobileAuth:
             return self._handle_failed_attempt()
     
     # ============================================
-    # 2. DESEN KİLİDİ (3x3 NOKTA)
+    # DESEN KİLİDİ (3x3 NOKTA)
     # ============================================
     
     def set_pattern(self, pattern: str) -> tuple:
         """Desen kilidi belirle (örn: "123456789")"""
-        # Desen formatı: 1-9 arası rakamlar, min 4 nokta
         if not pattern.isdigit():
             return False, "❌ Desen rakamlardan oluşmalı"
         
@@ -229,7 +241,7 @@ class MobileAuth:
         return [numbers[i:i+3] for i in range(0, 9, 3)]
     
     # ============================================
-    # 3. ŞİFRE (ESKİ, UYUMLULUK İÇİN)
+    # ŞİFRE
     # ============================================
     
     def set_password(self, password: str) -> tuple:
@@ -248,10 +260,8 @@ class MobileAuth:
     def check_password(self, password: str) -> tuple:
         """Şifre kontrolü"""
         if not self.password_file.exists():
-            # Acil durum: dosya yoksa varsayılan oluştur
             self._create_default_password()
         
-        # Kilit kontrolü
         if time.time() < self.locked_until:
             remaining = int((self.locked_until - time.time()) // 60)
             return False, f"🔒 {remaining} dakika bekleyin"
@@ -269,7 +279,7 @@ class MobileAuth:
             return self._handle_failed_attempt()
     
     # ============================================
-    # 4. GÜVENLİK SORUSU
+    # GÜVENLİK SORUSU
     # ============================================
     
     def set_security_question(self, question: str, answer: str) -> tuple:
@@ -319,15 +329,18 @@ class MobileAuth:
         return security["question"]
     
     # ============================================
-    # 5. BİYOMETRİK (PARMAK İZİ / YÜZ TANIMA)
+    # BİYOMETRİK
     # ============================================
     
     def check_biometric(self) -> bool:
-        """Biyometrik kontrol"""
+        """Biyometrik kontrol (Android)"""
         try:
-            # Burada gerçek biyometrik API kullanılır
-            # Şimdilik simülasyon
-            time.sleep(1)  # Parmak izi okunuyor...
+            if IS_ANDROID:
+                # Android biyometrik API'si
+                from android import biometric
+                return biometric.authenticate()
+            # Bilgisayar için simülasyon
+            time.sleep(1)
             self._log("Biyometrik ile başarılı giriş")
             return True
         except:
@@ -341,7 +354,7 @@ class MobileAuth:
         self._log(f"Biyometrik {'açıldı' if enable else 'kapatıldı'}")
     
     # ============================================
-    # 6. ORTAK FONKSİYONLAR
+    # ORTAK FONKSİYONLAR
     # ============================================
     
     def _handle_failed_attempt(self) -> tuple:
@@ -379,7 +392,7 @@ class MobileAuth:
         self._log("Deneme sayacı sıfırlandı")
     
     # ============================================
-    # 7. KULLANICI YÖNETİMİ
+    # KULLANICI YÖNETİMİ
     # ============================================
     
     def add_user(self, username: str, pin: str = None, pattern: str = None) -> tuple:
@@ -396,7 +409,7 @@ class MobileAuth:
         }
         
         if pin:
-            self.set_pin(pin)  # Ana PIN'i değiştir
+            self.set_pin(pin)
         
         self._save_users()
         self._log(f"Yeni kullanıcı eklendi: {username}")
@@ -417,7 +430,7 @@ class MobileAuth:
         return list(self.users.keys())
     
     # ============================================
-    # 8. DURUM BİLGİSİ
+    # DURUM BİLGİSİ
     # ============================================
     
     def get_status(self) -> dict:
@@ -453,7 +466,7 @@ class MobileAuth:
         self._log("Geçmiş temizlendi")
     
     # ============================================
-    # 9. AYARLAR
+    # AYARLAR
     # ============================================
     
     def set_method(self, method: str):
