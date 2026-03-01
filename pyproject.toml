@@ -1,0 +1,29 @@
+[project]
+name = "anna_mobile"
+version = "0.4.0"
+description = "Adaptive Nöro Network Asistanı Mobil"
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [
+    { name = "westabdu", email = "[email protected]" }
+]
+dependencies = [
+    "flet==0.22.0",
+    "python-dotenv>=1.0.0",
+    "requests>=2.31.0",
+    "pillow>=10.0.0",
+    "cryptography>=41.0.0"
+]
+
+[tool.flet]
+org = "com.anna"
+product = "A.N.N.A"
+company = "ANNA"
+copyright = "Copyright (C) 2026 by ANNA"
+
+[tool.flet.app]
+path = "."  # main.py'nin bulunduğu dizin
+module = "main"  # main.py dosyan
+
+[tool.flet.android]
+# Android özel ayarlar
